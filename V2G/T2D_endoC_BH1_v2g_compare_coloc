@@ -1,0 +1,49 @@
+library(tidyverse)
+dir = "data/coloc"
+files = list.files(dir)
+
+length(files) == 48
+
+coloc_dat <- lapply(files, function(file){
+	load(paste0(dir,"/", file))
+	dat = coloc_out_genes_signals[coloc_out_genes_signals$PP.H4.abf> 0.85,]
+	dat
+})
+
+coloc_dat = do.call("rbind", coloc_dat)
+
+coloc_dat = read_delim("/mnt/isilon/sfgi/programs/HTSeq-0.6.1/geneModels/gencodeV19.lincRNA.snomiRNA.annotation_for_HTseq.length.txt",delim="\t",col_names=c("gene_id","gene_name","gene_length")) %>%
+select(gene_id, gene_name) %>%
+right_join(coloc_dat)
+
+write.table(coloc_dat, file = "coloc_dat_pp4_08_output.txt", quote=F, row.names=F, sep="\t")
+coloc_dat[coloc_dat$eqtl_tissue == "Pancreas",] %>% as.data.frame()
+
+
+ load("v2g/T2D_v2g_mapping_TOPMED_Hg38_McCarthy_Voight_simplified_22XY.RData")
+
+t2d_v2g_simplified = t2d_v2g_simplified[grepl("hMSC",t2d_v2g_simplified$celltype)==F,]
+endo_c = t2d_v2g_simplified[t2d_v2g_simplified$celltype == "EndoC_BH1",]
+
+panc_eqtl = coloc_dat[coloc_dat$eqtl_tissue == "Pancreas",]
+
+panc_genes = intersect(endo_c$implicated_gene_name, panc_eqtl$gene_name)
+
+hepg2 = t2d_v2g_simplified[t2d_v2g_simplified$celltype == "HEPG2",]
+
+liver_eqtl = coloc_dat[coloc_dat$eqtl_tissue == "Liver",]
+
+liver_genes = intersect(hepg2$implicated_gene_name, liver_eqtl$gene_name)
+
+
+sgbs_d= t2d_v2g_simplified[t2d_v2g_simplified$celltype == "SGBS_Diff",]
+
+adipose_eqtl = coloc_dat[coloc_dat$eqtl_tissue == "Adipose_Subcutaneous"|coloc_dat$eqtl_tissue == "Adipose_Visceral_Omentum",]
+
+d_adipose_genes = intersect(sgbs_d$implicated_gene_name, adipose_eqtl$gene_name)
+
+
+
+sgbs_u= t2d_v2g_simplified[t2d_v2g_simplified$celltype == "SGBS_Undiff",]
+adipose_eqtl = coloc_dat[coloc_dat$eqtl_tissue == "Adipose_Subcutaneous"|coloc_dat$eqtl_tissue == "Adipose_Visceral_Omentum",]
+u_adipose_genes = intersect(sgbs_u$implicated_gene_name, adipose_eqtl$gene_name)
